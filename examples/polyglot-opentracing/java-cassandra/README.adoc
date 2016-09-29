@@ -1,0 +1,10 @@
+= Example of cassandra-opentracing-tracing
+
+Cassandra with opentracing instrumentation. (TO BE DONE)
+
+== Docker
+[source,shell]
+----
+$ docker build -t hawkular/apm-example-polyglot-opentracing-cassandra .
+$ docker run -it --rm -p 9042:9042 -e JVM_OPTS="-Dcassandra.custom_query_handler_class=org.apache.cassandra.cql3.CustomPayloadMirroringQueryHandler" hawkular/apm-example-polyglot-opentracing-cassandra
+----

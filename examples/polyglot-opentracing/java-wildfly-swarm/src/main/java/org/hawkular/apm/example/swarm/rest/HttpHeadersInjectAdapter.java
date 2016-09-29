@@ -14,27 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hawkular.apm.client.opentracing;
 
-import javax.inject.Singleton;
+package org.hawkular.apm.example.swarm.rest;
 
-import org.hawkular.apm.client.api.reporter.TraceReporter;
+import java.util.Iterator;
+import java.util.Map;
 
-import io.opentracing.AbstractAPMTracer;
+import io.opentracing.propagation.TextMap;
 
-/**
- * The opentracing compatible Tracer implementation for Hawkular APM.
- *
- * @author gbrown
- */
-@Singleton
-public class APMTracer extends AbstractAPMTracer {
+public final class HttpHeadersInjectAdapter implements TextMap {
+    private final Map<String,Object> map;
 
-    public APMTracer() {
+    public HttpHeadersInjectAdapter(final Map<String,Object> map) {
+        this.map = map;
     }
 
-    public APMTracer(TraceReporter reporter) {
-        super(reporter);
+    @Override
+    public Iterator<Map.Entry<String, String>> iterator() {
+        throw new UnsupportedOperationException("TextMapInjectAdapter should only be used with Tracer.inject()");
     }
 
+    @Override
+    public void put(String key, String value) {
+        this.map.put(key, value);
+    }
 }

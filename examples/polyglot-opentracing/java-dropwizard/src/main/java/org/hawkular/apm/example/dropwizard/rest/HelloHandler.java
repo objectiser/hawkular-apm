@@ -14,27 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hawkular.apm.client.opentracing;
 
-import javax.inject.Singleton;
+package org.hawkular.apm.example.dropwizard.rest;
 
-import org.hawkular.apm.client.api.reporter.TraceReporter;
-
-import io.opentracing.AbstractAPMTracer;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.Response;
 
 /**
- * The opentracing compatible Tracer implementation for Hawkular APM.
- *
- * @author gbrown
+ * @author Pavol Loffay
  */
-@Singleton
-public class APMTracer extends AbstractAPMTracer {
+@Path("/")
+public class HelloHandler {
 
-    public APMTracer() {
+    @GET
+    @Path("/hello")
+    public Response hello() {
+        return Response.ok().entity("Hello from Dropwizard! [java]").build();
     }
-
-    public APMTracer(TraceReporter reporter) {
-        super(reporter);
-    }
-
 }

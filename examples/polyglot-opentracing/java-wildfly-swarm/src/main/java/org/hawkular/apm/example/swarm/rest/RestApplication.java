@@ -14,27 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.hawkular.apm.client.opentracing;
 
-import javax.inject.Singleton;
+package org.hawkular.apm.example.swarm.rest;
 
-import org.hawkular.apm.client.api.reporter.TraceReporter;
+import javax.ws.rs.core.Application;
+import javax.ws.rs.ApplicationPath;
 
-import io.opentracing.AbstractAPMTracer;
-
-/**
- * The opentracing compatible Tracer implementation for Hawkular APM.
- *
- * @author gbrown
- */
-@Singleton
-public class APMTracer extends AbstractAPMTracer {
-
-    public APMTracer() {
-    }
-
-    public APMTracer(TraceReporter reporter) {
-        super(reporter);
-    }
-
+@ApplicationPath("/wildfly-swarm")
+public class RestApplication extends Application {
 }
