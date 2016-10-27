@@ -27,7 +27,7 @@ import org.hawkular.apm.api.model.trace.Trace;
 import org.hawkular.apm.api.utils.PropertyUtil;
 import org.hawkular.apm.client.api.reporter.TraceReporter;
 
-import io.opentracing.APMSpan;
+import io.opentracing.impl.APMSpan;
 
 /**
  * This class represents the context associated with a trace instance.

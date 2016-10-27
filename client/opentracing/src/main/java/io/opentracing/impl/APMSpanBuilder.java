@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.opentracing;
+package io.opentracing.impl;
 
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,14 +38,14 @@ public class APMSpanBuilder extends AbstractSpanBuilder {
      * @param operationName The operation name
      * @param reporter The trace reporter
      */
-    APMSpanBuilder(String operationName, TraceReporter reporter) {
-        super(operationName);
+    APMSpanBuilder(String operationName, TraceReporter reporter, Clock clock) {
+        super(operationName, clock);
         this.reporter = reporter;
     }
 
     @Override
     protected APMSpan createSpan() {
-        return new APMSpan(this, reporter);
+        return new APMSpan(this, reporter, clock);
     }
 
     @Override

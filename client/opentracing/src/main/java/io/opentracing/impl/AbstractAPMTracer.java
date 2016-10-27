@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.opentracing;
+package io.opentracing.impl;
 
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,10 +24,12 @@ import java.util.logging.Logger;
 
 import org.hawkular.apm.api.model.Constants;
 import org.hawkular.apm.api.model.trace.NodeType;
+import org.hawkular.apm.api.utils.NanoClock;
 import org.hawkular.apm.client.api.reporter.BatchTraceReporter;
 import org.hawkular.apm.client.api.reporter.TraceReporter;
 import org.hawkular.apm.client.opentracing.APMTracer;
 
+import io.opentracing.SpanContext;
 import io.opentracing.propagation.Format;
 
 /**
@@ -37,6 +40,8 @@ public abstract class AbstractAPMTracer extends AbstractTracer {
     private static final Logger log = Logger.getLogger(APMTracer.class.getName());
 
     private TraceReporter reporter;
+
+    private Clock clock = new NanoClock();
 
     public AbstractAPMTracer() {
         this.reporter = new BatchTraceReporter();
@@ -52,7 +57,7 @@ public abstract class AbstractAPMTracer extends AbstractTracer {
 
     @Override
     APMSpanBuilder createSpanBuilder(String operationName) {
-        return new APMSpanBuilder(operationName, reporter);
+        return new APMSpanBuilder(operationName, reporter, clock);
     }
 
     @Override

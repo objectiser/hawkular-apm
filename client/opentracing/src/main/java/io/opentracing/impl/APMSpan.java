@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.opentracing;
+package io.opentracing.impl;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -29,7 +30,8 @@ import org.hawkular.apm.client.api.reporter.TraceReporter;
 import org.hawkular.apm.client.opentracing.NodeBuilder;
 import org.hawkular.apm.client.opentracing.TraceContext;
 
-import io.opentracing.AbstractSpanBuilder.Reference;
+import io.opentracing.References;
+import io.opentracing.impl.AbstractSpanBuilder.Reference;
 
 /**
  * The APM span.
@@ -50,9 +52,10 @@ public class APMSpan extends AbstractSpan {
     /**
      * @param builder The span builder
      * @param reporter The trace reporter
+     * @param clock The clock
      */
-    public APMSpan(APMSpanBuilder builder, TraceReporter reporter) {
-        super(builder.operationName, builder.start);
+    public APMSpan(APMSpanBuilder builder, TraceReporter reporter, Clock clock) {
+        super(builder.operationName, builder.start, clock);
 
         init(builder, reporter);
     }

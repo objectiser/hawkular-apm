@@ -20,7 +20,7 @@ import javax.inject.Singleton;
 
 import org.hawkular.apm.client.api.reporter.TraceReporter;
 
-import io.opentracing.AbstractAPMTracer;
+import io.opentracing.impl.AbstractAPMTracer;
 
 /**
  * The opentracing compatible Tracer implementation for Hawkular APM.
