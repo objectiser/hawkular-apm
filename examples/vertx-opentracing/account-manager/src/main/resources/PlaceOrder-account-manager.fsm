@@ -1,0 +1,31 @@
+{
+  "initialState": "1",
+  "states": {
+    "1": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "GetAccount",
+        "peer": "OrderManager",
+        "nextState": "2"
+      }]
+    },
+    "2": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "GetAccount",
+        "peer": "OrderManager",
+        "nextState": "3"
+      },{
+        "eventType": "Send",
+        "operation": "AccountNotFound",
+        "peer": "OrderManager",
+        "nextState": "3"
+      }]
+    },
+    "3": {
+      "terminal": true
+    }
+  }
+}

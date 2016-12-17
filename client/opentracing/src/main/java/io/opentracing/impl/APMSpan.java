@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 import org.hawkular.apm.api.logging.Logger;
 import org.hawkular.apm.api.model.Constants;
+import org.hawkular.apm.api.model.Property;
 import org.hawkular.apm.api.model.config.ReportingLevel;
 import org.hawkular.apm.api.model.events.EndpointRef;
 import org.hawkular.apm.api.model.trace.CorrelationIdentifier;
@@ -34,8 +35,10 @@ import org.hawkular.apm.api.model.trace.NodeType;
 import org.hawkular.apm.api.utils.TimeUtil;
 import org.hawkular.apm.client.api.recorder.TraceRecorder;
 import org.hawkular.apm.client.api.sampler.ContextSampler;
+import org.hawkular.apm.client.opentracing.DeploymentMetaData;
 import org.hawkular.apm.client.opentracing.NodeBuilder;
 import org.hawkular.apm.client.opentracing.TraceContext;
+import org.hawkular.apm.client.opentracing.TraceListener;
 
 import io.opentracing.PropagableState;
 import io.opentracing.References;
@@ -58,12 +61,17 @@ public class APMSpan extends AbstractSpan implements PropagableState {
 
     private String interactionId;
 
+    private List<TraceListener> traceListeners;
+
     /**
      * @param builder  The span builder
      * @param recorder The trace recorder
      */
-    public APMSpan(APMSpanBuilder builder, TraceRecorder recorder, ContextSampler sampler) {
+    public APMSpan(APMSpanBuilder builder, TraceRecorder recorder, ContextSampler sampler,
+            List<TraceListener> traceListeners) {
         super(builder.operationName, builder.start);
+
+        this.traceListeners = traceListeners;
 
         init(builder, recorder, sampler);
     }
@@ -84,6 +92,9 @@ public class APMSpan extends AbstractSpan implements PropagableState {
         nodePath = nodeBuilder.getNodePath();
 
         traceContext.startProcessingNode();
+
+        traceListeners.forEach(l -> l.spanCreated(traceContext.getTransaction(),
+                DeploymentMetaData.getInstance().getServiceName(), traceContext.getTraceId(), this));
     }
 
     protected void initReferences(APMSpanBuilder builder, TraceRecorder recorder, ContextSampler sampler) {
@@ -184,13 +195,16 @@ public class APMSpan extends AbstractSpan implements PropagableState {
         // Check for passed state
         if (parentBuilder.state().containsKey(Constants.HAWKULAR_APM_ID)) {
             setInteractionId(parentBuilder.state().get(Constants.HAWKULAR_APM_ID).toString());
-
-            traceContext.initTraceState(parentBuilder.state());
         }
+        traceContext.initTraceState(parentBuilder.state());
 
         // Assume top level consumer, even if no state was provided, as span context
         // as passed using a 'child of' relationship
         getNodeBuilder().setNodeType(NodeType.Consumer);
+
+        // Notify listeners that span was extracted
+        traceListeners.forEach(l -> l.spanExtracted(traceContext.getTransaction(),
+                DeploymentMetaData.getInstance().getServiceName(), traceContext.getTraceId(), this));
 
         processRemainingReferences(builder, ref);
     }
@@ -375,6 +389,10 @@ public class APMSpan extends AbstractSpan implements PropagableState {
         if (nodeBuilder == null) {
             return;
         }
+
+        traceListeners.forEach(l -> l.spanFinished(traceContext.getTransaction(),
+                DeploymentMetaData.getInstance().getServiceName(), traceContext.getTraceId(), this));
+
         nodeBuilder.setOperation(getOperationName());
         nodeBuilder.setTimestamp(TimeUtil.toMicros(getStart()));
         nodeBuilder.setDuration(TimeUnit.NANOSECONDS.toMicros(getDuration().toNanos()));
@@ -435,4 +453,9 @@ public class APMSpan extends AbstractSpan implements PropagableState {
         }
         return state;
     }
+
+    public void addProperty(Property property) {
+        getNodeBuilder().addProperty(property);
+    }
+
 }

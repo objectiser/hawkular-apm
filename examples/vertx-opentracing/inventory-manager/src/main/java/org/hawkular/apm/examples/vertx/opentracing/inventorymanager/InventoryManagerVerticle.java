@@ -78,7 +78,7 @@ public class InventoryManagerVerticle extends AbstractVerticle {
                     .start()) {
 
                 if (!req.containsKey("itemId")) {
-                    message.fail(1, "Item id missing");
+                    sendError(1, "ItemIdMissing", message, getItemSpan);
                 } else {
                     try (Span queryInventorySpan = tracer.buildSpan("QueryInventory")
                             .asChildOf(getItemSpan)
@@ -88,8 +88,9 @@ public class InventoryManagerVerticle extends AbstractVerticle {
 
                         JsonObject acct = items.get(req.getString("itemId"));
                         if (acct == null) {
-                            sendError(2, "Item not found", message, getItemSpan);
+                            sendError(2, "ItemNotFound", message, getItemSpan);
                         } else {
+                            getItemSpan.setTag("status_code", "Ok");
                             message.reply(acct);
                         }
                     }
@@ -110,16 +111,21 @@ public class InventoryManagerVerticle extends AbstractVerticle {
             SpanContext spanCtx = tracer.extract(Format.Builtin.TEXT_MAP,
                     new VertxMessageExtractAdapter(order));
 
-            try (Span orderConfirmedSpan = tracer.buildSpan("UpdateQuantity")
+            try (Span orderConfirmedSpan = tracer.buildSpan("OrderConfirmed")
                     .asChildOf(spanCtx)
                     .start()) {
 
-                try (Span queryInventorySpan = tracer.buildSpan("WriteInventory")
+                try (Span updateQuantitySpan = tracer.buildSpan("UpdateQuantity")
                         .asChildOf(orderConfirmedSpan)
-                        .withTag("database.url", "InventoryDB")
-                        .withTag("database.statement", "UPDATE Inventory SET item=?")
                         .start()) {
-                    // Update quantity and write to db
+
+                    try (Span queryInventorySpan = tracer.buildSpan("WriteInventory")
+                            .asChildOf(updateQuantitySpan)
+                            .withTag("database.url", "InventoryDB")
+                            .withTag("database.statement", "UPDATE Inventory SET item=?")
+                            .start()) {
+                        // Update quantity and write to db
+                    }
                 }
             }
         }).completionHandler(result -> {

@@ -68,6 +68,7 @@
     <module>client/instrumenter</module>
     <module>client/kafka</module>
     <module>client/opentracing</module>
+    <module>client/opentracing-behaviour</module>
     <module>client/trace-publisher-rest-client</module>
     <module>client/trace-service-rest-client</module>
     <module>examples/vertx-opentracing</module>

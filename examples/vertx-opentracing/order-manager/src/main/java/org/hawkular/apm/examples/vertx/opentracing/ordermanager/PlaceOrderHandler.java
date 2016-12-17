@@ -21,13 +21,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import org.hawkular.apm.client.opentracing.APMTracer;
 import org.hawkular.apm.examples.vertx.opentracing.common.HttpHeadersExtractAdapter;
 import org.hawkular.apm.examples.vertx.opentracing.common.VertxMessageInjectAdapter;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServerResponse;
@@ -41,16 +39,17 @@ import io.vertx.ext.web.RoutingContext;
 class PlaceOrderHandler extends BaseHandler implements Handler<RoutingContext> {
     private static final Logger logger = Logger.getLogger(ListOrdersHandler.class.getName());
     private Map<String, JsonObject> orders = new HashMap<>();
-    private Tracer tracer = new APMTracer();
 
     @Override
     public void handle(RoutingContext routingContext) {
         logger.finest("Handling request on PlaceOrderHandler");
         routingContext.request().bodyHandler(buf -> {
-            SpanContext spanCtx = tracer.extract(Format.Builtin.TEXT_MAP, new HttpHeadersExtractAdapter(routingContext.request().headers()));
+            SpanContext spanCtx = getTracer().extract(Format.Builtin.TEXT_MAP,
+                    new HttpHeadersExtractAdapter(routingContext.request().headers()));
 
-            Span ordersConsumerSpan = tracer.buildSpan("POST")
+            Span ordersConsumerSpan = getTracer().buildSpan("POST")
                     .asChildOf(spanCtx)
+                    .withTag("peer.service", "Client")
                     .withTag("http.url", "/orders")
                     .withTag("transaction", "Place Order")
                     .start();
@@ -70,15 +69,24 @@ class PlaceOrderHandler extends BaseHandler implements Handler<RoutingContext> {
 
     }
 
-    private void checkAccount(RoutingContext routingContext, JsonObject order, HttpServerResponse response, Span parentSpan) {
-        Span getAccountSpan = tracer.buildSpan("GetAccount")
+    private void checkAccount(RoutingContext routingContext, JsonObject order, HttpServerResponse response,
+            Span parentSpan) {
+        Span getAccountSpan = getTracer().buildSpan("GetAccount")
+                .withTag("peer.service", "AccountManager")
                 .asChildOf(parentSpan)
                 .start();
-        tracer.inject(getAccountSpan.context(), Format.Builtin.TEXT_MAP, new VertxMessageInjectAdapter(order));
+        getTracer().inject(getAccountSpan.context(), Format.Builtin.TEXT_MAP, new VertxMessageInjectAdapter(order));
 
         logger.finest("Sending message to AccountManager.getAccount");
         routingContext.vertx().eventBus().send("AccountManager.getAccount", order, acctresp -> {
             logger.finest("Setting the span as finished");
+
+            if (!acctresp.succeeded()) {
+                getAccountSpan.setTag("fault", acctresp.cause().getMessage());
+            } else {
+                getAccountSpan.setTag("status_code", "Ok");
+            }
+
             getAccountSpan.finish();
 
             if (acctresp.succeeded()) {
@@ -92,15 +100,25 @@ class PlaceOrderHandler extends BaseHandler implements Handler<RoutingContext> {
         logger.info("Sent message to AccountManager.getAccount");
     }
 
-    private void checkStock(RoutingContext routingContext, JsonObject order, HttpServerResponse response, Span parentSpan) {
-        Span getItemSpan = tracer.buildSpan("GetItem").asChildOf(parentSpan).start();
-        tracer.inject(getItemSpan.context(), Format.Builtin.TEXT_MAP, new VertxMessageInjectAdapter(order));
+    private void checkStock(RoutingContext routingContext, JsonObject order, HttpServerResponse response,
+            Span parentSpan) {
+        Span getItemSpan = getTracer().buildSpan("GetItem")
+                .withTag("peer.service", "InventoryManager")
+                .asChildOf(parentSpan).start();
+        getTracer().inject(getItemSpan.context(), Format.Builtin.TEXT_MAP, new VertxMessageInjectAdapter(order));
 
         // Check stock
         routingContext.vertx().eventBus().send("InventoryManager.getItem", order, invresp -> {
             logger.fine("Getting inventory item");
 
+            if (!invresp.succeeded()) {
+                getItemSpan.setTag("fault", invresp.cause().getMessage());
+            } else {
+                getItemSpan.setTag("status_code", "Ok");
+            }
+
             getItemSpan.finish();
+
             if (invresp.succeeded()) {
                 logger.finest("Inventory response succeeded");
                 JsonObject item = (JsonObject) invresp.result().body();
@@ -122,13 +140,14 @@ class PlaceOrderHandler extends BaseHandler implements Handler<RoutingContext> {
                     parentSpan.setTag("orderId", order.getString("id"));
                     parentSpan.setTag("itemId", order.getString("itemId"));
                     parentSpan.setTag("accountId", order.getString("accountId"));
+                    parentSpan.setTag("http.status_code", 200);
 
                     parentSpan.finish();
 
                     orderConfirmed(routingContext, order, parentSpan);
                 } else {
                     logger.info("Out of stock");
-                    sendError(500, "Out of stock", response, parentSpan);
+                    sendError(500, "OutOfStock", response, parentSpan);
                 }
             } else {
                 logger.warning("Application failed");
@@ -139,8 +158,11 @@ class PlaceOrderHandler extends BaseHandler implements Handler<RoutingContext> {
 
     private void orderConfirmed(RoutingContext routingContext, JsonObject order, Span parentSpan) {
         logger.fine("Order confirmed");
-        try (Span orderConfirmedSpan = tracer.buildSpan("OrderConfirmed").addReference(io.opentracing.References.FOLLOWS_FROM, parentSpan.context()).start()) {
-            tracer.inject(orderConfirmedSpan.context(), Format.Builtin.TEXT_MAP, new VertxMessageInjectAdapter(order));
+        try (Span orderConfirmedSpan = getTracer().buildSpan("OrderConfirmed")
+                .withTag("peer.service", "InventoryManager,OrderLog")
+                .addReference(io.opentracing.References.FOLLOWS_FROM, parentSpan.context()).start()) {
+            getTracer().inject(orderConfirmedSpan.context(), Format.Builtin.TEXT_MAP,
+                    new VertxMessageInjectAdapter(order));
 
             // Publish confirmed order
             routingContext.vertx().eventBus().publish("Orders.confirmed", order);

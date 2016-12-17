@@ -214,8 +214,6 @@ public class TraceContext {
         Object level = state.get(Constants.HAWKULAR_APM_LEVEL);
         if (traceId != null) {
             setTraceId(traceId.toString());
-        } else {
-            log.severe("Trace id has not been propagated");
         }
         if (transaction != null) {
             setTransaction(transaction.toString());

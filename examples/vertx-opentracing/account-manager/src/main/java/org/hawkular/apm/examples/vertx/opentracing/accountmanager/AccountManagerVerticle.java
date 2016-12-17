@@ -79,7 +79,7 @@ public class AccountManagerVerticle extends AbstractVerticle {
 
                 if (!req.containsKey("accountId")) {
                     logger.warning("Account ID is missing");
-                    sendError(1, "Account id missing", message, getAccountSpan);
+                    sendError(1, "AccountIdMissing", message, getAccountSpan);
                 } else {
                     try (Span ignored = tracer.buildSpan("RetrieveAccount").asChildOf(getAccountSpan)
                             .withTag("database.url", "AccountsDB")
@@ -88,9 +88,10 @@ public class AccountManagerVerticle extends AbstractVerticle {
                         JsonObject acct = accounts.get(req.getString("accountId"));
                         if (acct == null) {
                             logger.warning("Account not found");
-                            sendError(2, "Not account found", message, getAccountSpan);
+                            sendError(2, "AccountNotFound", message, getAccountSpan);
                         } else {
                             logger.fine("Account found, replying");
+                            getAccountSpan.setTag("status_code", "Ok");
                             message.reply(acct);
                         }
                     }

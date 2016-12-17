@@ -1,0 +1,16 @@
+{
+  "initialState": "1",
+  "states": {
+    "1": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "hello",
+        "nextState": "2"
+      }]
+    },
+    "2": {
+      "terminal": true
+    }
+  }
+}

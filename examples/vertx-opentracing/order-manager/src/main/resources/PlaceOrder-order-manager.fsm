@@ -1,0 +1,113 @@
+{
+  "initialState": "24",
+  "states": {
+    "23": {
+      "terminal": true
+    },
+    "24": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "POST",
+        "peer": "Client",
+        "nextState": "26"
+      }]
+    },
+    "26": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "GetAccount",
+        "peer": "AccountManager",
+        "nextState": "27"
+      }]
+    },
+    "27": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "GetAccount",
+        "peer": "AccountManager",
+        "nextState": "29"
+      },{
+        "eventType": "Receive",
+        "operation": "AccountNotFound",
+        "peer": "AccountManager",
+        "nextState": "35"
+      }]
+    },
+    "29": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "GetItem",
+        "peer": "InventoryManager",
+        "nextState": "30"
+      }]
+    },
+    "30": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "GetItem",
+        "peer": "InventoryManager",
+        "nextState": "31"
+      },{
+        "eventType": "Receive",
+        "operation": "ItemNotFound",
+        "peer": "InventoryManager",
+        "nextState": "34"
+      }]
+    },
+    "31": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "POST",
+        "peer": "Client",
+        "nextState": "33"
+      },{
+        "eventType": "Send",
+        "operation": "OutOfStock",
+        "peer": "Client",
+        "nextState": "32"
+      }]
+    },
+    "32": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "OrderCancelled",
+        "peer": "InventoryManager",
+        "nextState": "23"
+      }]
+    },
+    "33": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "OrderConfirmed",
+        "peer": "InventoryManager",
+        "nextState": "23"
+      }]
+    },
+    "34": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "ItemNotFound",
+        "peer": "Client",
+        "nextState": "23"
+      }]
+    },
+    "35": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "AccountNotFound",
+        "peer": "Client",
+        "nextState": "23"
+      }]
+    }
+  }
+}

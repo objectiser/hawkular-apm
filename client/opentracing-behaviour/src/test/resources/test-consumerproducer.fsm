@@ -1,0 +1,40 @@
+{
+  "initialState": "1",
+  "states": {
+    "1": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "hello",
+        "nextState": "2"
+      }]
+    },
+    "2": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "world",
+        "nextState": "3"
+      }]
+    },
+    "3": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "world",
+        "nextState": "4"
+      }]
+    },
+    "4": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "hello",
+        "nextState": "5"
+      }]
+    },
+    "5": {
+      "terminal": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "initialState": "1",
+  "states": {
+    "1": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "GetItem",
+        "peer": "OrderManager",
+        "nextState": "2"
+      }]
+    },
+    "2": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Send",
+        "operation": "GetItem",
+        "peer": "OrderManager",
+        "nextState": "4"
+      },{
+        "eventType": "Send",
+        "operation": "ItemNotFound",
+        "peer": "OrderManager",
+        "nextState": "3"
+      }]
+    },
+    "3": {
+      "terminal": true
+    },
+    "4": {
+      "terminal": false,
+      "transitions": [{
+        "eventType": "Receive",
+        "operation": "OrderConfirmed",
+        "peer": "OrderManager",
+        "nextState": "3"
+      }]
+    }
+  }
+}

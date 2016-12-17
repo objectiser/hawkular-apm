@@ -82,7 +82,7 @@ public class OrderLogVerticle extends AbstractVerticle {
                     String acctId = order.getString("accountId");
                     JsonArray myOrders = orders.get(acctId);
                     if (myOrders == null) {
-                        sendError(1, "Account not found", message, getOrdersSpan);
+                        sendError(1, "AccountNotFound", message, getOrdersSpan);
                     } else {
                         message.reply(myOrders);
                     }
