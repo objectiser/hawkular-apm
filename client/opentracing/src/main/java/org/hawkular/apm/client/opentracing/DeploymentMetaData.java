@@ -131,7 +131,7 @@ public class DeploymentMetaData {
         INSTANCE = new DeploymentMetaData(ENV_SERVICE_NAME, ENV_BUILD_STAMP);
     }
 
-    static DeploymentMetaData getInstance() {
+    public static DeploymentMetaData getInstance() {
         return INSTANCE;
     }
 }

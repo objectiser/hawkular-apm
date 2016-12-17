@@ -17,11 +17,13 @@
 package io.opentracing;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.hawkular.apm.api.model.Constants;
 import org.hawkular.apm.client.api.recorder.TraceRecorder;
 import org.hawkular.apm.client.api.sampler.ContextSampler;
+import org.hawkular.apm.client.opentracing.TraceListener;
 
 /**
  * This class is used to build the information used to create a Trace node.
@@ -34,20 +36,25 @@ public class APMSpanBuilder extends AbstractSpanBuilder implements PropagableSta
 
     private TraceRecorder recorder;
     private ContextSampler sampler;
+    private List<TraceListener> traceListeners;
 
     /**
      * @param operationName The operation name
      * @param recorder The trace recorder
+     * @param sample The sample
+     * @param traceListeners The trace listeners
      */
-    APMSpanBuilder(String operationName, TraceRecorder recorder, ContextSampler sampler) {
+    APMSpanBuilder(String operationName, TraceRecorder recorder, ContextSampler sampler,
+            List<TraceListener> traceListeners) {
         super(operationName);
         this.recorder = recorder;
         this.sampler = sampler;
+        this.traceListeners = traceListeners;
     }
 
     @Override
     protected APMSpan createSpan() {
-        return new APMSpan(this, recorder, sampler);
+        return new APMSpan(this, recorder, sampler, traceListeners);
     }
 
     @Override

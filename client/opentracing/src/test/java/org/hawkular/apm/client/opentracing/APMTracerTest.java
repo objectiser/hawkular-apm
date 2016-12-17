@@ -18,10 +18,13 @@ package org.hawkular.apm.client.opentracing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -39,10 +42,19 @@ import org.hawkular.apm.client.api.recorder.TraceRecorder;
 import org.hawkular.apm.tests.common.Wait;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+
+import io.opentracing.APMSpan;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMapExtractAdapter;
+import io.opentracing.propagation.TextMapInjectAdapter;
 
 /**
  * @author gbrown
@@ -52,6 +64,7 @@ public class APMTracerTest {
     private static final String MY_VALUE = "myValue";
     private static final String MY_TAG = "myTag";
     private static final String TEST_TXN = "TestBTxn";
+    private static final String TEST_SERVICE = "TestService";
     private static final String TEST_APM_ID = "abcd";
     private static final String TEST_APM_TRACEID = "xyz";
     private static ObjectMapper mapper;
@@ -476,6 +489,121 @@ public class APMTracerTest {
         }
 
         assertEquals(0, service.getMessages().size());
+    }
+
+    @Test
+    public void testTraceListenerCreatedAndFinished() throws JsonProcessingException {
+        DeploymentMetaData.getInstance().setServiceName(TEST_SERVICE);
+        TestTraceRecorder recorder = new TestTraceRecorder();
+        APMTracer tracer = new APMTracer(recorder);
+
+        TraceListener l = Mockito.mock(TraceListener.class);
+        tracer.addTraceListener(l);
+
+        ArgumentCaptor<APMSpan> spanCreatedSpanCaptor = ArgumentCaptor.forClass(APMSpan.class);
+        ArgumentCaptor<APMSpan> spanFinishedSpanCaptor = ArgumentCaptor.forClass(APMSpan.class);
+        ArgumentCaptor<String> spanCreatedTxnCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanFinishedTxnCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanCreatedServiceCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanFinishedServiceCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanCreatedTraceIdCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanFinishedTraceIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        Map<String,String> headers = new HashMap<>();
+        headers.put(Constants.HAWKULAR_APM_ID, TEST_APM_ID);
+        headers.put(Constants.HAWKULAR_APM_TXN, TEST_TXN);
+        SpanContext ctx = tracer.extract(Format.Builtin.TEXT_MAP,
+                new TextMapExtractAdapter(headers));
+
+        Span span = tracer.buildSpan("hello")
+                .asChildOf(ctx)
+                .start();
+        span.finish();
+
+        Mockito.verify(l).spanCreated(spanCreatedTxnCaptor.capture(), spanCreatedServiceCaptor.capture(),
+                spanCreatedTraceIdCaptor.capture(), spanCreatedSpanCaptor.capture());
+        Mockito.verify(l).spanFinished(spanFinishedTxnCaptor.capture(), spanFinishedServiceCaptor.capture(),
+                spanFinishedTraceIdCaptor.capture(), spanFinishedSpanCaptor.capture());
+
+        assertEquals(span, spanCreatedSpanCaptor.getValue());
+        assertEquals(span, spanFinishedSpanCaptor.getValue());
+        assertEquals(TEST_SERVICE, spanCreatedServiceCaptor.getValue());
+        assertEquals(TEST_SERVICE, spanFinishedServiceCaptor.getValue());
+        assertEquals(TEST_TXN, spanCreatedTxnCaptor.getValue());
+        assertEquals(TEST_TXN, spanFinishedTxnCaptor.getValue());
+        assertEquals(spanCreatedTraceIdCaptor.getValue(), spanFinishedTraceIdCaptor.getValue());
+    }
+
+    @Test
+    public void testTraceListenerExtracted() throws JsonProcessingException {
+        DeploymentMetaData.getInstance().setServiceName(TEST_SERVICE);
+        TestTraceRecorder recorder = new TestTraceRecorder();
+        APMTracer tracer = new APMTracer(recorder);
+
+        TraceListener l = Mockito.mock(TraceListener.class);
+        tracer.addTraceListener(l);
+
+        ArgumentCaptor<APMSpan> spanInjectedSpanCaptor = ArgumentCaptor.forClass(APMSpan.class);
+        ArgumentCaptor<String> spanInjectedTxnCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanInjectedServiceCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanInjectedTraceIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        Map<String,String> headers = new HashMap<>();
+        headers.put(Constants.HAWKULAR_APM_ID, TEST_APM_ID);
+        headers.put(Constants.HAWKULAR_APM_TXN, TEST_TXN);
+        SpanContext ctx = tracer.extract(Format.Builtin.TEXT_MAP,
+                new TextMapExtractAdapter(headers));
+
+        Span span = tracer.buildSpan("hello")
+                .asChildOf(ctx)
+                .start();
+
+        Map<String,String> outmap = new HashMap<>();
+
+        tracer.inject(span.context(), Format.Builtin.TEXT_MAP, new TextMapInjectAdapter(outmap));
+        span.finish();
+
+        Mockito.verify(l).spanInjected(spanInjectedTxnCaptor.capture(), spanInjectedServiceCaptor.capture(),
+                spanInjectedTraceIdCaptor.capture(), spanInjectedSpanCaptor.capture());
+
+        assertEquals(span, spanInjectedSpanCaptor.getValue());
+        assertEquals(TEST_SERVICE, spanInjectedServiceCaptor.getValue());
+        assertEquals(TEST_TXN, spanInjectedTxnCaptor.getValue());
+        assertNotNull(spanInjectedTraceIdCaptor.getValue());
+    }
+
+    @Test
+    public void testTraceListenerInjected() throws JsonProcessingException {
+        DeploymentMetaData.getInstance().setServiceName(TEST_SERVICE);
+        TestTraceRecorder recorder = new TestTraceRecorder();
+        APMTracer tracer = new APMTracer(recorder);
+
+        TraceListener l = Mockito.mock(TraceListener.class);
+        tracer.addTraceListener(l);
+
+        ArgumentCaptor<APMSpan> spanExtractedSpanCaptor = ArgumentCaptor.forClass(APMSpan.class);
+        ArgumentCaptor<String> spanExtractedTxnCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanExtractedServiceCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> spanExtractedTraceIdCaptor = ArgumentCaptor.forClass(String.class);
+
+        Map<String,String> headers = new HashMap<>();
+        headers.put(Constants.HAWKULAR_APM_ID, TEST_APM_ID);
+        headers.put(Constants.HAWKULAR_APM_TXN, TEST_TXN);
+        SpanContext ctx = tracer.extract(Format.Builtin.TEXT_MAP,
+                new TextMapExtractAdapter(headers));
+
+        Span span = tracer.buildSpan("hello")
+                .asChildOf(ctx)
+                .start();
+        span.finish();
+
+        Mockito.verify(l).spanExtracted(spanExtractedTxnCaptor.capture(), spanExtractedServiceCaptor.capture(),
+                spanExtractedTraceIdCaptor.capture(), spanExtractedSpanCaptor.capture());
+
+        assertEquals(span, spanExtractedSpanCaptor.getValue());
+        assertEquals(TEST_SERVICE, spanExtractedServiceCaptor.getValue());
+        assertEquals(TEST_TXN, spanExtractedTxnCaptor.getValue());
+        assertNotNull(spanExtractedTraceIdCaptor.getValue());
     }
 
     public static class TestTraceRecorder implements TraceRecorder {
