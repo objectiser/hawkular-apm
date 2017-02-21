@@ -53,10 +53,12 @@
       <groupId>org.hawkular.apm</groupId>
       <artifactId>hawkular-apm-examples-vertx-opentracing-common</artifactId>
     </dependency>
+    <!--
     <dependency>
       <groupId>org.hawkular.apm</groupId>
       <artifactId>hawkular-apm-trace-publisher-rest-client</artifactId>
     </dependency>
+    -->
   </dependencies>
 
   <build>
